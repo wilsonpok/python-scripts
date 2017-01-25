@@ -1,2 +1,2 @@
 # python-scripts
-Examples of R scripts found around the web.
+Examples of python scripts found around the web.
