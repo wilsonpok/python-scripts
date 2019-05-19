@@ -9,6 +9,7 @@ import modelplotpy as mp
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegressionCV
 from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix
 
 
@@ -242,3 +243,31 @@ mp.plot_cumresponse(ps, highlight_decile = 3)
 # plot all four evaluation plots and save to file
 mp.plot_all(ps, save_fig = True, save_fig_filename = 'Selection model churn')
 
+
+
+
+##################
+# Get coefficients
+##################
+
+coef_vals = pd.DataFrame(np.transpose(clf_mult.coef_))
+coef_vals.columns = ['values']
+
+coefficients = pd.concat([pd.DataFrame({'coef' : X.columns}), coef_vals], axis = 1)
+
+coefficients['abs_values'] = abs(coefficients['values'])
+
+coefficients.sort_values('abs_values', ascending=False, inplace=True)
+
+print(coefficients)
+
+
+
+
+
+test_preds = clf_mult.predict(X_test)
+test_pred_probs = clf_mult.predict_proba(X_test)[:,0]
+
+confusion_matrix(y_true=y_test, y_pred=test_preds)
+# array([[1566,  160],
+#        [ 321,  274]])
