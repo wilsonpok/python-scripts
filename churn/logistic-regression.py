@@ -8,6 +8,7 @@ import seaborn as sns
 import modelplotpy as mp
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegressionCV
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import confusion_matrix
 
 
@@ -189,18 +190,9 @@ X_test.shape, y_test.shape
 # Fit model
 ################
 
-model = LogisticRegressionCV(cv=5, random_state=666, n_jobs=8, max_iter=500)
-
-model_fit = model.fit(X_train, y_train)
-
-coef_vals = pd.DataFrame(np.transpose(model_fit.coef_))
-coef_vals.columns = ['values']
-
-coefficients = pd.concat([pd.DataFrame({'coef' : X.columns}), coef_vals], axis = 1)
-
-coefficients['abs_values'] = abs(coefficients['values'])
-
-coefficients.sort_values('abs_values', ascending=False, inplace=True)
+# Instantiate a few classification models
+clf_rf = RandomForestClassifier().fit(X_train, y_train)
+clf_mult = LogisticRegression(multi_class = 'multinomial', solver = 'newton-cg').fit(X_train, y_train)
 
 
 
@@ -208,14 +200,15 @@ coefficients.sort_values('abs_values', ascending=False, inplace=True)
 # Assess model
 ################
 
-test_preds = model_fit.predict(X_test)
-test_pred_probs = model_fit.predict_proba(X_test)[:,0]
+obj = mp.modelplotpy(feature_data = [X_train, X_test]
+                     , label_data = [y_train, y_test]
+                     , dataset_labels = ['train data', 'test data']
+                     , models = [clf_rf, clf_mult]
+                     , model_labels = ['random forest', 'multinomial logit']
+                     )
 
-confusion_matrix(y_true=y_test, y_pred=test_preds)
-# array([[1566,  160],
-#        [ 320,  275]])
-
-
+# transform data generated with prepare_scores_and_deciles into aggregated data for chosen plotting scope 
+ps = obj.plotting_scope(select_model_label = ['random forest'], select_dataset_label = ['test data'])
 
 
 
@@ -229,4 +222,23 @@ obj = mp.modelplotpy(feature_data = [X_train, X_test]
 
 ps = obj.plotting_scope(select_model_label = ['logistic regression'], select_dataset_label = ['train data'])
 
+
+
+# plot the cumulative gains plot
+mp.plot_cumgains(ps)
+
+# plot the cumulative gains plot and annotate the plot at decile = 2
+mp.plot_cumgains(ps, highlight_decile = 2)
+
+# plot the cumulative lift plot and annotate the plot at decile = 2
+mp.plot_cumlift(ps, highlight_decile = 2)
+
+# plot the response plot and annotate the plot at decile = 2
+mp.plot_response(ps, highlight_decile = 1)
+
+# plot the cumulative response plot and annotate the plot at decile = 3
+mp.plot_cumresponse(ps, highlight_decile = 3)
+
+# plot all four evaluation plots and save to file
+mp.plot_all(ps, save_fig = True, save_fig_filename = 'Selection model churn')
 
