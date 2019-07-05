@@ -1,0 +1,164 @@
+#!/usr/bin/env python3
+#
+# sloop - 'cos it's like cut(ter) but a different kind of boat.
+#
+# Try something like:
+#     cat test3.csv | ./sloop.py -d\| -e\\ -q\" -f16 -r"_XXX_" -n{
+#
+# N.B. Does NOT take files as arguments on the command line.  They need to be piped/streamed in.
+#
+# By:  Stewart V. Wright  <stewart@vifortech.com>
+# Licence: GLP 3+
+
+import sys
+import argparse
+import csv
+import logging as log
+
+
+def parse_commandline():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-q",
+        "--quotechar",
+        help="A one-character string used to quote fields containing special "
+        "characters",
+        required=False,
+        action="store",
+    )
+    parser.add_argument(
+        "-d",
+        "--delimiter",
+        help="A one-character string used to separate fields",
+        required=False,
+        action="store",
+        default=",",
+    )
+    parser.add_argument(
+        "-r",
+        "--repldelim",
+        help="Replace the current delimiter in each field with this string",
+        required=False,
+        action="store",
+        default=None,
+    )
+    parser.add_argument(
+        "-n",
+        "--newdelim",
+        help="Use this string as the new delimiter",
+        required=False,
+        action="store",
+        default=None,
+    )
+    parser.add_argument(
+        "-e",
+        "--escapechar",
+        help="On reading, the escapechar removes any special meaning from the "
+        "following character, allowing delimters and quotechars in the field",
+        required=False,
+        action="store",
+        default="\\",
+    )
+    parser.add_argument(
+        "-f",
+        "--fields",
+        help="The list of fields you want returned, made up of one range, or many "
+        "ranges separated by commas (similar to cut)",
+        required=True,
+        action="store",
+    )
+    parser.add_argument(
+        "-v", "--verbose", help="Verbose?", required=False, action="store_true"
+    )
+
+    args = parser.parse_args()
+
+    if args.verbose:
+        log.basicConfig(level=log.DEBUG)
+
+    log.debug("Commandline args: {}".format(args.__dict__))
+
+    return args
+
+
+def update_dialect(args):
+    """Update the delimiter and quotechar for importing"""
+    dialect = csv.unix_dialect()
+    dialect.delimiter = args.delimiter
+    dialect.escapechar = args.escapechar
+
+    if args.quotechar is None:
+        log.debug("args.quotechar is None")
+    elif args.quotechar == "":
+        dialect.quoting = csv.QUOTE_NONE
+        dialect.quotechar = None
+    else:
+        log.debug("Using args.quotechar")
+        dialect.quotechar = args.quotechar
+
+    if args.repldelim is None:
+        args.repldelim = dialect.delimiter
+
+    if args.newdelim is None:
+        args.newdelim = dialect.delimiter
+
+    for x in ["quoting", "quotechar", "delimiter"]:
+        log.debug("Dialect  {}  ==  {}".format(x, eval("dialect." + x)))
+
+    for x in ["repldelim", "newdelim"]:
+        log.debug("Dialect  {}  ==  {}".format(x, eval("args." + x)))
+
+    return dialect
+
+
+def format_fields(in_f):
+    """Take a range of integers in a string and turn into a list
+
+    "1,2,4-6,9" --> [1,2,4,5,6,9]"""
+    raw = in_f.split(",")
+    retval = []
+    for f in raw:
+        if "-" in f:
+            low_high = f.split("-")
+            low = int(low_high[0])
+            high = int(low_high[1]) + 1
+            for i in range(low, high):
+                retval.append(i)
+        else:
+            retval.append(int(f))
+
+    log.debug("Wanted fields are: {}".format(retval))
+    return retval
+
+
+def read_file(args):
+    """What do _you_ think this function does?"""
+    dialect = update_dialect(args)
+    fields = format_fields(args.fields)
+
+    with sys.stdin as csvfile:
+        for line in csv.reader(csvfile, dialect=dialect):
+            # Print(dialect.delimiter.join(map(str, [line[i - 1] for i in fields])))
+            print(
+                args.newdelim.join(
+                    map(
+                        lambda x: dialect.quotechar
+                        + str(x)
+                        .replace(
+                            dialect.quotechar, dialect.escapechar + dialect.quotechar
+                        )
+                        .replace(dialect.delimiter, args.repldelim)
+                        + dialect.quotechar,
+                        [line[i - 1] for i in fields],
+                    )
+                )
+            )
+
+
+def main():
+    args = parse_commandline()
+    read_file(args)
+
+
+if __name__ == "__main__":
+    main()
