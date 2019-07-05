@@ -188,7 +188,7 @@ X_test.shape, y_test.shape
 
 
 ################
-# Fit model
+# Fit models
 ################
 
 # Instantiate a few classification models
@@ -196,6 +196,10 @@ clf_rf = RandomForestClassifier().fit(X_train, y_train)
 clf_mult = LogisticRegression(multi_class = 'multinomial', solver = 'newton-cg').fit(X_train, y_train)
 clf_mult_cv = LogisticRegressionCV(cv=5, random_state=666, n_jobs=8, max_iter=500).fit(X_train, y_train)
 
+
+ dtree = tree.DecisionTreeClassifier(criterion = "entropy", min_samples_leaf = 500, compute_importances = True)
+ 
+In [13]: dtree = dtree.fit(X, Y)
 
 ################
 # Assess model
